@@ -9,6 +9,7 @@ extends VBoxContainer
 
 signal status_message(text: String, is_error: bool)
 signal refresh_plugin_requested(db_path: String)
+signal create_script_requested(base_type: String, default_path: String)
 
 # ---------------------------------------------------------------------------
 # State
@@ -40,16 +41,14 @@ const _COL_WIDTH_ARRAY: int = 200
 # UI references (built in _ready)
 # ---------------------------------------------------------------------------
 
-var _path_edit: LineEdit
-var _load_btn: Button
-var _save_btn: Button
-var _add_row_btn: Button
 var _dirty_label: Label
 var _status_label: RichTextLabel
 var _table_dropdown: OptionButton
 var _search_edit: LineEdit
 var _schema_label: Label
 var _actions_menu: MenuButton
+var _refresh_btn: Button
+var _save_btn: Button
 
 var _spreadsheet: GRDSpreadsheetView
 var _validation_panel: GRDValidationPanel
@@ -59,6 +58,7 @@ var _resource_first_mode: bool = false
 var _property_columns: Array[GRDColumn] = []
 
 var _browse_dialog: EditorFileDialog = null
+var _create_database_dialog: EditorFileDialog = null
 var _table_dialog: AcceptDialog = null
 var _table_name_edit: LineEdit = null
 var _table_script_picker: OptionButton = null
@@ -66,13 +66,18 @@ var _editing_table_asset: GRDTableAsset = null
 var _delete_table_dialog: ConfirmationDialog = null
 var _delete_table_label: Label = null
 
-const _MENU_BROWSE: int = 1
-const _MENU_REFRESH: int = 2
-const _MENU_ADD_TABLE: int = 3
-const _MENU_EDIT_TABLE: int = 4
-const _MENU_DELETE_TABLE: int = 5
-const _MENU_GENERATE_CONSTANTS: int = 6
-const _MENU_VALIDATE: int = 7
+const _MENU_CREATE_DATABASE: int = 1
+const _MENU_LOAD_DATABASE: int = 2
+const _MENU_SAVE: int = 3
+const _MENU_VALIDATE: int = 4
+const _MENU_ADD_TABLE: int = 10
+const _MENU_EDIT_TABLE: int = 11
+const _MENU_DELETE_TABLE: int = 12
+const _MENU_GENERATE_CONSTANTS: int = 20
+const _MENU_GENERATE_TABLE_SCRIPT: int = 21
+const _MENU_GENERATE_CELL_SCRIPT: int = 22
+const _MENU_GENERATE_COLUMN_SCRIPT: int = 23
+const _MENU_REFRESH: int = 30
 
 
 # ---------------------------------------------------------------------------
@@ -91,21 +96,11 @@ func _build_ui() -> void:
 	toolbar.name = "Toolbar"
 	add_child(toolbar)
 
-	var db_label: Label = Label.new()
-	db_label.text = "DB:"
-	toolbar.add_child(db_label)
-
-	_path_edit = LineEdit.new()
-	_path_edit.placeholder_text = "res://path/to/database.tres"
-	_path_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_path_edit.size_flags_stretch_ratio = 1.2
-	_path_edit.text_submitted.connect(_on_path_submitted)
-	toolbar.add_child(_path_edit)
-
-	_load_btn = Button.new()
-	_load_btn.text = "Load"
-	_load_btn.pressed.connect(_on_load_pressed)
-	toolbar.add_child(_load_btn)
+	_actions_menu = MenuButton.new()
+	_actions_menu.text = "File"
+	_actions_menu.tooltip_text = "Database, table, generation, and plugin actions"
+	_build_actions_menu()
+	toolbar.add_child(_actions_menu)
 
 	toolbar.add_child(_vsep())
 
@@ -136,34 +131,16 @@ func _build_ui() -> void:
 	_search_edit.text_changed.connect(_on_search_changed)
 	toolbar.add_child(_search_edit)
 
-	toolbar.add_child(_vsep())
-
-	_add_row_btn = Button.new()
-	_add_row_btn.text = "+Row"
-	_add_row_btn.pressed.connect(_on_add_row_pressed)
-	toolbar.add_child(_add_row_btn)
+	_refresh_btn = Button.new()
+	_refresh_btn.text = "Refresh"
+	_refresh_btn.tooltip_text = "Reload the open database and schema scripts from disk"
+	_refresh_btn.pressed.connect(_on_refresh_database_pressed)
+	toolbar.add_child(_refresh_btn)
 
 	_save_btn = Button.new()
 	_save_btn.text = "Save"
 	_save_btn.pressed.connect(_on_save_pressed)
 	toolbar.add_child(_save_btn)
-
-	_actions_menu = MenuButton.new()
-	_actions_menu.text = "More"
-	_actions_menu.tooltip_text = "Less common database actions"
-	var popup := _actions_menu.get_popup()
-	popup.add_item("Browse...", _MENU_BROWSE)
-	popup.add_item("Refresh plugin", _MENU_REFRESH)
-	popup.add_separator()
-	popup.add_item("Add table", _MENU_ADD_TABLE)
-	popup.add_item("Edit table", _MENU_EDIT_TABLE)
-	popup.add_item("Delete table", _MENU_DELETE_TABLE)
-	popup.add_separator()
-	popup.add_item("Generate GDScript constants", _MENU_GENERATE_CONSTANTS)
-	popup.add_item("Validate", _MENU_VALIDATE)
-	popup.id_pressed.connect(_on_actions_menu_id_pressed)
-	GRDTheme.style_popup_menu(popup)
-	toolbar.add_child(_actions_menu)
 
 	_dirty_label = Label.new()
 	_dirty_label.text = ""
@@ -185,6 +162,7 @@ func _build_ui() -> void:
 	_spreadsheet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_spreadsheet.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_spreadsheet.cell_changed.connect(_on_cell_changed)
+	_spreadsheet.add_row_requested.connect(_on_add_row_pressed)
 	_spreadsheet.row_selected.connect(_on_spreadsheet_row_selected)
 	_spreadsheet.row_delete_requested.connect(_on_spreadsheet_row_delete_requested)
 	_spreadsheet.row_move_requested.connect(_on_spreadsheet_row_move_requested)
@@ -203,6 +181,61 @@ static func _vsep() -> VSeparator:
 	return sep
 
 
+func _build_actions_menu() -> void:
+	var popup := _actions_menu.get_popup()
+	popup.clear()
+	_add_submenu(popup, "Database", "DatabaseMenu", [
+		{"label": "Create...", "id": _MENU_CREATE_DATABASE},
+		{"label": "Load...", "id": _MENU_LOAD_DATABASE},
+		{"label": "Save", "id": _MENU_SAVE},
+		{"separator": true},
+		{"label": "Validate", "id": _MENU_VALIDATE},
+	])
+	_add_submenu(popup, "Table", "TableMenu", [
+		{"label": "Add", "id": _MENU_ADD_TABLE},
+		{"label": "Edit", "id": _MENU_EDIT_TABLE},
+		{"label": "Delete", "id": _MENU_DELETE_TABLE},
+	])
+	_add_submenu(popup, "Generate", "GenerateMenu", [
+		{"label": "GDScript Constants", "id": _MENU_GENERATE_CONSTANTS},
+		{
+			"label": "Table Script...",
+			"id": _MENU_GENERATE_TABLE_SCRIPT,
+			"tooltip": "Create a GRDTableSchema script. Exported properties become editable table columns.",
+		},
+		{
+			"label": "Cell Script...",
+			"id": _MENU_GENERATE_CELL_SCRIPT,
+			"tooltip": "Create a GRDCell script for reusable nested cell data.",
+		},
+		{
+			"label": "Column Script...",
+			"id": _MENU_GENERATE_COLUMN_SCRIPT,
+			"tooltip": "Create a GRDColumn script for advanced column metadata behavior.",
+		},
+	])
+	_add_submenu(popup, "Advanced", "AdvancedMenu", [
+		{"label": "Reload plugin", "id": _MENU_REFRESH},
+	])
+	GRDTheme.style_popup_menu(popup)
+
+
+func _add_submenu(parent: PopupMenu, label: String, submenu_name: String, items: Array) -> void:
+	var submenu := PopupMenu.new()
+	submenu.name = submenu_name
+	for item in items:
+		if item.has("separator"):
+			submenu.add_separator()
+		else:
+			submenu.add_item(item["label"], item["id"])
+			if item.has("tooltip"):
+				submenu.set_item_tooltip(submenu.get_item_count() - 1, item["tooltip"])
+	submenu.id_pressed.connect(_on_actions_menu_id_pressed)
+	GRDTheme.style_popup_menu(submenu)
+	parent.add_child(submenu)
+	parent.add_submenu_item(label, submenu_name)
+
+
 static func _apply_compact_theme(root: Node) -> void:
 	GRDTheme.apply_tree(root)
 
@@ -219,20 +252,30 @@ func set_undo_redo(undo_redo: EditorUndoRedoManager) -> void:
 # Database loading
 # ---------------------------------------------------------------------------
 
-func load_database(path: String) -> void:
+func load_database(path: String, force_reload: bool = false) -> void:
 	if path.is_empty():
 		_set_status("No path provided.", true)
 		return
+	var previous_table_name: StringName = &""
+	if force_reload and _selected_table_asset != null:
+		previous_table_name = _selected_table_asset.table_name
 
 	if _dirty_database or _dirty_rows.size() > 0:
 		push_warning("GRD: Loading new database — discarding unsaved changes.")
 		_set_status("Loading — discarding unsaved changes.", true)
 
 	_db_asset_path = path
-	_path_edit.text = path
 	GRDCellEditorFactory.clear_caches()
 
-	_db_asset = load(path) as GRDDatabaseAsset
+	if force_reload:
+		var filesystem := EditorInterface.get_resource_filesystem()
+		if filesystem != null and filesystem.has_method("scan_sources"):
+			filesystem.scan_sources()
+	_db_asset = ResourceLoader.load(
+		path,
+		"",
+		ResourceLoader.CACHE_MODE_REPLACE if force_reload else ResourceLoader.CACHE_MODE_REUSE,
+	) as GRDDatabaseAsset
 	if _db_asset == null:
 		_set_status("Failed to load GRDDatabaseAsset from: " + path, true)
 		_db = null
@@ -247,6 +290,8 @@ func load_database(path: String) -> void:
 	_selected_row_index = -1
 	_selected_row = null
 	_dirty_rows.clear()
+	if previous_table_name != &"":
+		_select_table_by_name(previous_table_name)
 	if _normalize_project_file_paths_to_uids():
 		_dirty_database = true
 
@@ -364,6 +409,8 @@ func _refresh_table_dropdown() -> void:
 		var idx: int = _table_dropdown.get_item_count()
 		_table_dropdown.add_item("%s%s (%d)" % [table_name, mode_str, count])
 		_table_dropdown.set_item_metadata(idx, table_name)
+		if _selected_table_asset != null and _selected_table_asset.table_name == StringName(table_name):
+			_table_dropdown.selected = idx
 
 	# Auto-select first table if available and none is selected.
 	if _table_dropdown.get_item_count() > 0 and _selected_table_asset == null:
@@ -391,7 +438,6 @@ func _refresh_spreadsheet() -> void:
 	var rows_start_ms: int = Time.get_ticks_msec()
 	var rows: Array[GRDRow] = _selected_table.all_readonly()
 	var rows_ms: int = Time.get_ticks_msec() - rows_start_ms
-
 	# Pass resource-first property columns to spreadsheet for type display.
 	var grid_start_ms: int = Time.get_ticks_msec()
 	_spreadsheet.set_data(columns, rows, _selected_table_asset, _property_columns if _resource_first_mode else [], _db_asset)
@@ -542,6 +588,13 @@ func _find_table_asset_by_name(table_name: StringName) -> GRDTableAsset:
 	return null
 
 
+func _select_table_by_name(table_name: StringName) -> void:
+	_selected_table_asset = _find_table_asset_by_name(table_name)
+	_selected_table = _db.get_table(table_name) if _db != null and _db.has_table(table_name) else null
+	_resource_first_mode = _selected_table_asset != null and _selected_table_asset.schema != null
+	_update_property_columns()
+
+
 # ---------------------------------------------------------------------------
 # Dirty tracking
 # ---------------------------------------------------------------------------
@@ -648,10 +701,12 @@ func _update_button_states() -> void:
 	var has_table: bool = _selected_table_asset != null
 	var has_dirty: bool = _dirty_database or _dirty_rows.size() > 0
 
+	_spreadsheet.set_add_row_enabled(has_table and _resource_first_mode)
+	_table_dropdown.disabled = not has_db or _table_dropdown.get_item_count() == 0
+	_refresh_btn.disabled = not has_db
 	_save_btn.disabled = not has_dirty
 	_save_btn.text = "Save" if has_dirty else "Save (clean)"
-	_add_row_btn.disabled = not (has_table and _resource_first_mode)
-	_table_dropdown.disabled = not has_db or _table_dropdown.get_item_count() == 0
+	_set_actions_menu_disabled(_MENU_SAVE, not has_dirty)
 	_set_actions_menu_disabled(_MENU_VALIDATE, not has_db)
 	_set_actions_menu_disabled(_MENU_ADD_TABLE, not has_db)
 	_set_actions_menu_disabled(_MENU_EDIT_TABLE, not has_db or not has_table)
@@ -671,25 +726,67 @@ func _set_actions_menu_disabled(id: int, disabled: bool) -> void:
 	if _actions_menu == null:
 		return
 	var popup := _actions_menu.get_popup()
+	_set_popup_item_disabled(popup, id, disabled)
+
+
+func _set_popup_item_disabled(popup: PopupMenu, id: int, disabled: bool) -> bool:
 	var index := popup.get_item_index(id)
 	if index != -1:
 		popup.set_item_disabled(index, disabled)
+		return true
+	for child in popup.get_children():
+		if child is PopupMenu and _set_popup_item_disabled(child as PopupMenu, id, disabled):
+			return true
+	return false
 
 
 # ---------------------------------------------------------------------------
 # Signal handlers: toolbar
 # ---------------------------------------------------------------------------
 
-func _on_path_submitted(new_text: String) -> void:
-	load_database(new_text.strip_edges())
-
-
-func _on_load_pressed() -> void:
-	load_database(_path_edit.text.strip_edges())
-
-
 func _on_refresh_plugin_pressed() -> void:
 	refresh_plugin_requested.emit(_db_asset_path)
+
+
+func _on_refresh_database_pressed() -> void:
+	if _db_asset_path.is_empty():
+		_set_status("No database loaded.", true)
+		return
+	load_database(_db_asset_path, true)
+
+
+func _on_create_database_pressed() -> void:
+	if _create_database_dialog == null:
+		_create_database_dialog = EditorFileDialog.new()
+		_create_database_dialog.file_mode = EditorFileDialog.FILE_MODE_SAVE_FILE
+		_create_database_dialog.access = EditorFileDialog.ACCESS_RESOURCES
+		_create_database_dialog.title = "Create GRDDatabaseAsset"
+		_create_database_dialog.filters = PackedStringArray([
+			"*.tres ; TRES Files", "*.res ; RES Files",
+		])
+		_create_database_dialog.min_size = Vector2i(1200, 800)
+		_create_database_dialog.file_selected.connect(_create_database_at_path)
+		add_child(_create_database_dialog)
+	var dialog_size := Vector2i(1200, 800)
+	_create_database_dialog.popup_centered(dialog_size)
+	_create_database_dialog.size = dialog_size
+
+
+func _create_database_at_path(path: String) -> void:
+	var db_path := path.strip_edges()
+	if db_path.is_empty():
+		_set_status("No database path provided.", true)
+		return
+	if not db_path.ends_with(".tres") and not db_path.ends_with(".res"):
+		db_path += ".tres"
+	var asset := GRDDatabaseAsset.new()
+	var err := ResourceSaver.save(asset, db_path)
+	if err != OK:
+		_set_status("Failed to create database: %s (error %d)" % [db_path, err], true)
+		return
+	EditorInterface.get_resource_filesystem().scan()
+	load_database(db_path)
+	_set_status("Created database: %s" % db_path.get_file(), false)
 
 
 func _on_browse_pressed() -> void:
@@ -703,7 +800,6 @@ func _on_browse_pressed() -> void:
 		])
 		_browse_dialog.min_size = Vector2i(1200, 800)
 		_browse_dialog.file_selected.connect(func(path: String) -> void:
-			_path_edit.text = path
 			load_database(path)
 		)
 		add_child(_browse_dialog)
@@ -718,8 +814,12 @@ func _on_browse_pressed() -> void:
 
 func _on_actions_menu_id_pressed(id: int) -> void:
 	match id:
-		_MENU_BROWSE:
+		_MENU_CREATE_DATABASE:
+			_on_create_database_pressed()
+		_MENU_LOAD_DATABASE:
 			_on_browse_pressed()
+		_MENU_SAVE:
+			_on_save_pressed()
 		_MENU_REFRESH:
 			_on_refresh_plugin_pressed()
 		_MENU_ADD_TABLE:
@@ -730,6 +830,12 @@ func _on_actions_menu_id_pressed(id: int) -> void:
 			_on_delete_table_pressed()
 		_MENU_GENERATE_CONSTANTS:
 			_on_generate_constants_pressed()
+		_MENU_GENERATE_TABLE_SCRIPT:
+			_request_script_creation("GRDTableSchema", _default_generated_script_path("table"))
+		_MENU_GENERATE_CELL_SCRIPT:
+			_request_script_creation("GRDCell", _default_generated_script_path("cell"))
+		_MENU_GENERATE_COLUMN_SCRIPT:
+			_request_script_creation("GRDColumn", _default_generated_script_path("column"))
 		_MENU_VALIDATE:
 			_on_validate_pressed()
 
@@ -1350,6 +1456,18 @@ func _on_generate_constants_pressed() -> void:
 	_set_status("Generated constants: %s" % out_path, false)
 
 
+func _request_script_creation(base_type: String, default_path: String) -> void:
+	create_script_requested.emit(base_type, default_path)
+	_set_status("Creating %s script..." % base_type, false)
+
+
+func _default_generated_script_path(kind: String) -> String:
+	var base_path := "res://"
+	if not _db_asset_path.is_empty():
+		base_path = _db_asset_path.get_base_dir() + "/"
+	return base_path + "new_%s.gd" % _snake_identifier(kind, kind)
+
+
 static func _build_constants_source(db_asset: GRDDatabaseAsset, db_path: String) -> String:
 	var generated_class_name := _script_class_name_from_path(db_path)
 	var lines := PackedStringArray()
@@ -1455,6 +1573,16 @@ static func _constant_identifier(value: String, fallback: String) -> String:
 		return fallback
 
 	var result := "_".join(words).to_upper()
+	if _starts_with_digit(result):
+		result = fallback + "_" + result
+	return result
+
+
+static func _snake_identifier(value: String, fallback: String) -> String:
+	var words := _identifier_words(value)
+	if words.is_empty():
+		return fallback
+	var result := "_".join(words).to_lower()
 	if _starts_with_digit(result):
 		result = fallback + "_" + result
 	return result
