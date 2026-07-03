@@ -5,7 +5,7 @@ extends VBoxContainer
 ## Resource-first editor panel for Godot Resource Database.
 ## Provides: toolbar (DB path, table dropdown, search, add/remove row,
 ## validate, save), spreadsheet grid view, validation panel, dirty tracking.
-## Columns are derived from row_script exported properties via GRDPropertyColumn.
+## Columns are derived from schema exported properties via GRDColumn.
 
 signal status_message(text: String, is_error: bool)
 signal refresh_plugin_requested(db_path: String)
@@ -48,7 +48,7 @@ var _dirty_label: Label
 var _status_label: RichTextLabel
 var _table_dropdown: OptionButton
 var _search_edit: LineEdit
-var _row_script_label: Label
+var _schema_label: Label
 var _actions_menu: MenuButton
 
 var _spreadsheet: GRDSpreadsheetView
@@ -56,7 +56,7 @@ var _validation_panel: GRDValidationPanel
 
 # Resource-first mode state
 var _resource_first_mode: bool = false
-var _property_columns: Array[GRDPropertyColumn] = []
+var _property_columns: Array[GRDColumn] = []
 
 var _browse_dialog: EditorFileDialog = null
 var _table_dialog: AcceptDialog = null
@@ -120,10 +120,10 @@ func _build_ui() -> void:
 	_table_dropdown.item_selected.connect(_on_table_dropdown_selected)
 	toolbar.add_child(_table_dropdown)
 
-	# Row Script summary. Script changes live in the table dialog so they are deliberate.
-	_row_script_label = Label.new()
-	_row_script_label.text = "Script: (none)"
-	_row_script_label.visible = false
+	# Table schema summary. Schema changes live in the table dialog so they are deliberate.
+	_schema_label = Label.new()
+	_schema_label.text = "Table schema: (none)"
+	_schema_label.visible = false
 
 	var search_label: Label = Label.new()
 	search_label.text = "Search:"
@@ -230,7 +230,7 @@ func load_database(path: String) -> void:
 
 	_db_asset_path = path
 	_path_edit.text = path
-	GRDResourceCellEditorFactory.clear_caches()
+	GRDCellEditorFactory.clear_caches()
 
 	_db_asset = load(path) as GRDDatabaseAsset
 	if _db_asset == null:
@@ -266,7 +266,7 @@ func load_database(path: String) -> void:
 func _rebuild_database() -> void:
 	if _db_asset == null:
 		return
-	GRDResourceCellEditorFactory.clear_caches()
+	GRDCellEditorFactory.clear_caches()
 	_db = GRDDatabase.load_from_asset(_db_asset, null, _db_asset_path)
 	if _selected_table_asset != null and _db != null:
 		var tname: StringName = _selected_table_asset.table_name
@@ -319,7 +319,7 @@ func _normalize_resource_file_paths_to_uids(resource: Resource, seen: Dictionary
 
 		if prop_type == TYPE_STRING and prop_hint == PROPERTY_HINT_FILE:
 			var current_path: String = String(current_value)
-			var uid_path: String = GRDResourceCellEditorFactory.project_file_path_storage_value(current_path)
+			var uid_path: String = GRDCellEditorFactory.project_file_path_storage_value(current_path)
 			if uid_path != current_path:
 				resource.set(prop_name, uid_path)
 				changed = true
@@ -359,7 +359,7 @@ func _refresh_table_dropdown() -> void:
 		var count := table.size() if table != null else 0
 		var ta: GRDTableAsset = _find_table_asset_by_name(StringName(table_name))
 		var mode_str: String = ""
-		if ta != null and ta.row_script != null:
+		if ta != null and ta.schema != null:
 			mode_str = " [R]"
 		var idx: int = _table_dropdown.get_item_count()
 		_table_dropdown.add_item("%s%s (%d)" % [table_name, mode_str, count])
@@ -419,14 +419,14 @@ func _deferred_refresh_spreadsheet() -> void:
 # ---------------------------------------------------------------------------
 
 func _compute_columns() -> Array[Dictionary]:
-	# Legacy mode: no row_script set. Return empty columns — spreadsheet
+	# Legacy mode: no schema set. Return empty columns — spreadsheet
 	# shows read-only cells only.
 	return []
 
 
 func _compute_columns_resource_first() -> Array[Dictionary]:
 	var columns: Array[Dictionary] = []
-	if _selected_table_asset == null or _selected_table_asset.row_script == null:
+	if _selected_table_asset == null or _selected_table_asset.schema == null:
 		return columns
 	var sticky_columns := _get_sticky_columns()
 
@@ -468,9 +468,9 @@ func _compute_columns_resource_first() -> Array[Dictionary]:
 
 func _get_sticky_columns() -> Dictionary:
 	var result: Dictionary = {}
-	if _selected_table_asset == null or _selected_table_asset.row_script == null:
+	if _selected_table_asset == null or _selected_table_asset.schema == null:
 		return result
-	var schema = _selected_table_asset.row_script.new()
+	var schema = _selected_table_asset.schema.new()
 	if schema == null or not schema.has_method("get_sticky_columns"):
 		return result
 	for column_name in schema.get_sticky_columns():
@@ -658,13 +658,13 @@ func _update_button_states() -> void:
 	_set_actions_menu_disabled(_MENU_DELETE_TABLE, not has_db or not has_table)
 	_set_actions_menu_disabled(_MENU_GENERATE_CONSTANTS, not has_db)
 
-	_row_script_label.visible = has_table
-	if has_table:
-		_row_script_label.text = "Script: %s" % _get_table_script_label(_selected_table_asset)
-		_table_dropdown.tooltip_text = _row_script_label.text
-	else:
-		_row_script_label.text = "Script: (none)"
-		_table_dropdown.tooltip_text = ""
+	_schema_label.visible = has_table
+		if has_table:
+			_schema_label.text = "Table schema: %s" % _get_table_script_label(_selected_table_asset)
+			_table_dropdown.tooltip_text = _schema_label.text
+		else:
+			_schema_label.text = "Table schema: (none)"
+			_table_dropdown.tooltip_text = ""
 
 
 func _set_actions_menu_disabled(id: int, disabled: bool) -> void:
@@ -743,15 +743,15 @@ func _on_table_dropdown_selected(index: int) -> void:
 
 	# Detect resource-first mode.
 	_resource_first_mode = _selected_table_asset != null \
-		and _selected_table_asset.row_script != null
+		and _selected_table_asset.schema != null
 	_update_property_columns()
 	_refresh_spreadsheet()
 	_update_button_states()
 	if _selected_table_asset != null:
 		if _resource_first_mode:
-			_set_status("Resource-first mode: columns from '%s' exports." % _selected_table_asset.row_script.resource_path.get_file(), false)
+			_set_status("Resource-first mode: columns from '%s' exports." % _selected_table_asset.schema.resource_path.get_file(), false)
 		else:
-			_set_status("No row script set. Set a Resource row script to enable editing.", true)
+			_set_status("No table schema set. Set a Resource table schema to enable editing.", true)
 
 
 func _on_search_changed(new_text: String) -> void:
@@ -827,7 +827,7 @@ func _on_spreadsheet_row_move_requested(from_index: int, to_index: int) -> void:
 	if _selected_table_asset == null or from_index == to_index:
 		return
 	if not _resource_first_mode:
-		_set_status("Set a Resource row script before reordering rows.", true)
+		_set_status("Set a Resource table schema before reordering rows.", true)
 		return
 	if from_index < 0 or from_index >= _selected_table_asset.rows.size():
 		return
@@ -890,7 +890,7 @@ func _on_edit_table_pressed() -> void:
 	_table_dialog.title = "Edit Table"
 	_table_dialog.ok_button_text = "Apply"
 	_table_name_edit.text = String(_selected_table_asset.table_name)
-	_populate_table_script_picker(_selected_table_asset.row_script)
+	_populate_table_script_picker(_selected_table_asset.schema)
 	_table_dialog.popup_centered(Vector2i(420, 170))
 
 
@@ -918,7 +918,7 @@ func _ensure_table_dialog() -> void:
 	_table_name_edit.placeholder_text = "items"
 	box.add_child(_table_name_edit)
 	var script_label: Label = Label.new()
-	script_label.text = "Row script:"
+	script_label.text = "Table schema:"
 	box.add_child(script_label)
 	_table_script_picker = OptionButton.new()
 	_table_script_picker.tooltip_text = "Resource script used to create rows and derive columns."
@@ -937,16 +937,16 @@ func _create_table_from_dialog() -> void:
 	if existing_table != null and existing_table != _editing_table_asset:
 		_set_status("Table '%s' already exists." % String(table_name), true)
 		return
-	var row_script: Script = _get_selected_table_script()
+	var schema: Script = _get_selected_table_script()
 	if _editing_table_asset != null:
-		_apply_table_settings(_editing_table_asset, table_name, row_script)
+		_apply_table_settings(_editing_table_asset, table_name, schema)
 		_editing_table_asset = null
 		return
 	var table := GRDTableAsset.new()
 	table.table_name = table_name
 	table.id_field = &"id"
 	table.rows = []
-	table.row_script = row_script
+	table.schema = schema
 	var tables: Array[GRDTableAsset] = []
 	for database_table in _db_asset.tables:
 		tables.append(database_table)
@@ -958,15 +958,15 @@ func _create_table_from_dialog() -> void:
 	_rebuild_database()
 	_refresh_ui()
 	_select_table_in_dropdown(table_name)
-	if row_script != null:
+	if schema != null:
 		_set_status("Created table '%s'." % String(table_name), false)
 	else:
-		_set_status("Created table '%s'. Edit the table to set a Resource row script before adding rows." % String(table_name), false)
+		_set_status("Created table '%s'. Edit the table to set a Resource table schema before adding rows." % String(table_name), false)
 
 
-func _apply_table_settings(table: GRDTableAsset, table_name: StringName, row_script: Script) -> void:
+func _apply_table_settings(table: GRDTableAsset, table_name: StringName, schema: Script) -> void:
 	table.table_name = table_name
-	table.row_script = row_script
+	table.schema = schema
 	_mark_table_asset_changed(table)
 	_mark_database_dirty()
 	_selected_table_asset = table
@@ -1009,7 +1009,7 @@ func _execute_delete_table() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Row script helpers
+# Table schema helpers
 # ---------------------------------------------------------------------------
 
 func _populate_table_script_picker(current_script: Script) -> void:
@@ -1019,13 +1019,13 @@ func _populate_table_script_picker(current_script: Script) -> void:
 
 	var seen: Dictionary = {}
 
-	# Project global scripts that extend GRDRowSchema.
+	# Project global scripts that extend GRDTableSchema.
 	for gcls in ProjectSettings.get_global_class_list():
 		var script_path: String = gcls.get("path", "")
 		if script_path.is_empty():
 			continue
 		var loaded = load(script_path)
-		if loaded is Script and _script_extends_row_schema(loaded as Script):
+		if loaded is Script and _script_extends_table_schema(loaded as Script):
 			var gname: String = gcls.get("class", "")
 			if gname != "" and not seen.has(gname):
 				seen[gname] = true
@@ -1038,7 +1038,7 @@ func _populate_table_script_picker(current_script: Script) -> void:
 		_table_script_picker.add_item(type_name)
 		_table_script_picker.set_item_metadata(idx, type_name)
 
-	# Select current row_script if set; include fallback for unresolvable scripts.
+	# Select current schema if set; include fallback for unresolvable scripts.
 	if current_script != null:
 		var current_name: String = current_script.get_global_name()
 
@@ -1086,13 +1086,13 @@ func _get_selected_table_script() -> Script:
 
 
 func _get_table_script_label(table: GRDTableAsset) -> String:
-	if table == null or table.row_script == null:
+	if table == null or table.schema == null:
 		return "(none)"
-	var global_name: String = table.row_script.get_global_name()
+	var global_name: String = table.schema.get_global_name()
 	if not global_name.is_empty():
 		return global_name
-	if not table.row_script.resource_path.is_empty():
-		return table.row_script.resource_path.get_file()
+	if not table.schema.resource_path.is_empty():
+		return table.schema.resource_path.get_file()
 	return "(unnamed script)"
 
 
@@ -1113,9 +1113,9 @@ func _resolve_script_from_type_name(type_name: String) -> Script:
 
 func _update_property_columns() -> void:
 	_property_columns.clear()
-	if _selected_table_asset == null or _selected_table_asset.row_script == null:
+	if _selected_table_asset == null or _selected_table_asset.schema == null:
 		return
-	_property_columns = GRDPropertyColumn.from_script(_selected_table_asset.row_script)
+	_property_columns = GRDColumn.from_script(_selected_table_asset.schema)
 
 
 # ---------------------------------------------------------------------------
@@ -1126,7 +1126,7 @@ func _on_add_row_pressed() -> void:
 	if _selected_table_asset == null:
 		return
 	if not _resource_first_mode:
-		_set_status("Set a Resource row script before adding rows.", true)
+		_set_status("Set a Resource table schema before adding rows.", true)
 		return
 
 	var new_row: Resource = _create_new_row_resource()
@@ -1166,7 +1166,7 @@ func _on_add_row_pressed() -> void:
 
 
 func _create_new_row_resource() -> Resource:
-	if _selected_table_asset.row_script != null:
+	if _selected_table_asset.schema != null:
 		var new_row: Resource = _selected_table_asset.create_row()
 		if new_row == null:
 			_set_status("Failed to create row from script.", true)
@@ -1178,7 +1178,7 @@ func _create_new_row_resource() -> Resource:
 			var new_id: StringName = _generate_unique_id()
 			new_row.set(String(id_field), new_id)
 		return new_row
-	_set_status("Set a Resource row script before adding rows.", true)
+	_set_status("Set a Resource table schema before adding rows.", true)
 	return null
 
 
@@ -1202,7 +1202,7 @@ func _on_remove_row_pressed() -> void:
 	if _selected_table_asset == null:
 		return
 	if not _resource_first_mode:
-		_set_status("Set a Resource row script before removing rows.", true)
+		_set_status("Set a Resource table schema before removing rows.", true)
 		return
 	if _selected_row == null:
 		return
@@ -1324,7 +1324,7 @@ func _on_validate_pressed() -> void:
 		_set_status("Database failed to load.", true)
 		return
 
-	var issues: Array[GRDDatabaseIssue] = _db.validate()
+	var issues: Array[GRDValidationIssue] = _db.validate()
 	_validation_panel.set_issues(issues)
 
 	if issues.is_empty():
@@ -1382,7 +1382,7 @@ static func _build_constants_source(db_asset: GRDDatabaseAsset, db_path: String)
 		lines.append("\tconst TABLE := &\"%s\"" % _escape_string(String(table.table_name)))
 		lines.append("\tconst ID_FIELD := &\"%s\"" % _escape_string(String(table.get_id_field())))
 
-		for column: GRDPropertyColumn in table.get_property_columns():
+		for column: GRDColumn in table.get_property_columns():
 			if column == null or column.name == &"":
 				continue
 			var constant_name := _unique_identifier(
@@ -1527,9 +1527,9 @@ func _next_unique_table_name() -> String:
 # Script inheritance helpers
 # ---------------------------------------------------------------------------
 
-static func _script_extends_row_schema(script: Script) -> bool:
+static func _script_extends_table_schema(script: Script) -> bool:
 	while script != null:
-		if script.get_global_name() == "GRDRowSchema":
+		if script.get_global_name() == "GRDTableSchema":
 			return true
 		script = script.get_base_script()
 	return false

@@ -8,26 +8,40 @@ A Godot editor plugin that provides a spreadsheet-like database editing experien
 2. Open **Project > Project Settings > Plugins** and enable **Godot Resource Database**.
 3. The **Resource DB** tab will appear in the editor.
 
-## Asset Model
+## Core Concepts
 
-| Resource | Purpose |
+| Concept | Resource/API | Purpose |
 |---|---|
-| `GRDRowSchema` | Base class for table schemas — extends this for each table |
-| `GRDCellResource` | Base class for nested editable cell resources within a row |
-| `GRDDatabaseAsset` | Top-level collection of tables |
-| `GRDTableAsset` | One table: name, id field, rows, row_script |
-| `GRDPropertyColumn` | Column descriptor derived from `@export` property metadata |
-| `GRDRow` | Lightweight adapter over Resource-backed rows |
+| Database | `GRDDatabaseAsset` | Top-level saved `Resource` containing tables |
+| Table | `GRDTableAsset` | One saved table: name, ID field, schema, and rows |
+| Schema | `GRDTableSchema` | Base class for table schemas. Exported properties become columns |
+| Row | `GRDRow` | Runtime adapter over one Resource-backed row |
+| Column | `GRDColumn` | Column descriptor derived from `@export` property metadata |
+| Cell | `GRDCell` | Base class for nested editable cell resources inside a row |
 
 ## Quickstart
 
-### 1. Define Table Schemas
+### 1. Create the Database Asset
 
-Top-level table schemas go under `res://database/schema/` and extend `GRDRowSchema`. Exported properties become spreadsheet columns automatically.
+Create or open `res://database/database.tres` as a `GRDDatabaseAsset`. This is the root asset the editor opens and the runtime loads.
+
+### 2. Add Tables
+
+Add one `GRDTableAsset` for each table and set:
+
+| Property | Description |
+|---|---|
+| `table_name` | Unique name for lookup, e.g. `&"items"` |
+| `id_field` | Property on each row used as its ID. Defaults to `&"id"` |
+| `schema` | The `GRDTableSchema` script for this table |
+
+### 3. Define Table Schemas
+
+Table schemas usually live under `res://database/schema/` and extend `GRDTableSchema`. Exported properties become spreadsheet columns automatically.
 
 ```gdscript
 class_name ItemsSchema
-extends GRDRowSchema
+extends GRDTableSchema
 
 @export var icon: Texture2D
 @export_file("*.tscn") var scene: String
@@ -40,32 +54,22 @@ func get_sticky_columns() -> PackedStringArray:
     return PackedStringArray(["id", "icon"])
 ```
 
-### 2. Define Nested Cell Resources
+Override `get_sticky_columns()` to pin columns to the left.
 
-Editable cells that need structured data extend `GRDCellResource`. These show up as inline editable cells in the spreadsheet.
+### 4. Define Nested Cells
+
+Editable cells that need structured data extend `GRDCell`. These show up as inline editable cells in the spreadsheet.
 
 ```gdscript
 class_name StatValueSchema
-extends GRDCellResource
+extends GRDCell
 
 @export var stat: StatsSchema
 @export var flat: float
 @export var percent: float
 ```
 
-### 3. Create the Database
-
-Create or open `res://database/database.tres` (a `GRDDatabaseAsset`). Add a `GRDTableAsset` for each table and set:
-
-| Property | Description |
-|---|---|
-| `table_name` | Unique name for lookup (e.g. `&"items"`) |
-| `id_field` | Property on each row used as its ID (default `&"id"`) |
-| `row_script` | The `GRDRowSchema` script for this table |
-
-All `@export` properties on the row script become columns in the spreadsheet. Override `get_sticky_columns()` to pin columns to the left (optional).
-
-### 4. Querying
+### 5. Query the Database
 
 Generate constants from the editor panel first: **More > Generate GDScript constants**. This writes a sibling script next to the database asset, named from the asset file. For `res://database/database.tres`, the generated script is `res://database/database.gd` with `class_name Database`.
 
@@ -169,7 +173,7 @@ var label := row.get_value("stats.label", "")
 
 - Open/select a `GRDDatabaseAsset` by path or file dialog
 - List tables with row counts and resource-first indicators
-- Row script picker for setting typed Resource scripts
+- Table schema picker for setting typed Resource scripts
 - Spreadsheet-style row/column view with property-derived columns
 - Inline cell editors for `String`, `StringName`, `int`, `float`, `bool`, enums, `Resource` references, `Script` references, and `Array` properties
 - Visible-cell search (filters displayed rows)
@@ -183,8 +187,8 @@ var label := row.get_value("stats.label", "")
 
 - Duplicate/missing row IDs
 - Empty/duplicate table names
-- Row type mismatches (rows don't match `row_script`)
-- Row script does not produce a `Resource` instance
+- Row type mismatches (rows don't match `schema`)
+- Schema does not produce a `Resource` instance
 - Null rows
 
 Issues have three severity levels: `ERROR`, `WARNING`, and `INFO`. Use `format()` or `str(issue)` for human-readable output.

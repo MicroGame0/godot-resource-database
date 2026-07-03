@@ -1,5 +1,5 @@
 class_name NestedCellTestItem
-extends GRDCellResource
+extends GRDCell
 
 @export var label: String = ""
 @export var child: NestedCellTestItem = null
