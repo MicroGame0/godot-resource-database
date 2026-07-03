@@ -1,4 +1,4 @@
 class_name NestedCellContainerTestItem
-extends GRDCellResource
+extends GRDCell
 
 @export var children: Array[NestedCellTestItem]

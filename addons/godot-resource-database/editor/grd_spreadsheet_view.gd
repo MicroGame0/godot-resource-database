@@ -4,7 +4,7 @@ extends VBoxContainer
 
 ## Spreadsheet-like table view that renders GRDRow data in a grid with
 ## inline cell editors.  Resource-first architecture only: columns are
-## derived from GRDPropertyColumn via row_script exported properties.
+## derived from GRDColumn via schema exported properties.
 ## Provides visible-cell text search, row selection, and a cell_changed
 ## signal for dirty tracking.
 
@@ -58,7 +58,7 @@ class RowDragHandle:
 ##   "sticky"     : bool        – stays visible during horizontal scroll
 ##   "is_id"      : bool
 ##   "is_declared": bool        – true when ANY row declares this prop (hint only)
-##   "property_column": GRDPropertyColumn or null  (resource-first mode)
+##   "property_column": GRDColumn or null  (resource-first mode)
 var _columns: Array[Dictionary] = []
 var _rows: Array[GRDRow] = []
 var _filtered_indices: Array[int] = []
@@ -66,7 +66,7 @@ var _search_text: String = ""
 var _id_field: StringName = &"id"
 var _table_asset: GRDTableAsset = null
 var _selected_filtered_idx: int = -1
-var _property_columns: Array[GRDPropertyColumn] = []
+var _property_columns: Array[GRDColumn] = []
 var _database_asset: GRDDatabaseAsset = null
 var _rebuild_generation: int = 0
 
@@ -132,7 +132,7 @@ func set_data(
 	columns: Array[Dictionary],
 	rows: Array[GRDRow],
 	table_asset: GRDTableAsset,
-	property_columns: Array[GRDPropertyColumn] = [],
+	property_columns: Array[GRDColumn] = [],
 	database_asset: GRDDatabaseAsset = null,
 ) -> void:
 	_columns = columns
@@ -407,18 +407,18 @@ func _build_row(filtered_idx: int) -> void:
 		var cell: Control
 
 		# Resource-first mode: branch on property_column.
-		var prop_col: GRDPropertyColumn = col.get("property_column", null) as GRDPropertyColumn
+		var prop_col: GRDColumn = col.get("property_column", null) as GRDColumn
 		if prop_col != null:
 			var is_missing: bool = value == null and not row.has_path(key)
 
 			if is_missing:
-				cell = GRDResourceCellEditorFactory.read_only_label("(not set)")
+				cell = GRDCellEditorFactory.read_only_label("(not set)")
 				cell.add_theme_color_override("font_color", GRDTheme.TEXT_DIM)
 			elif prop_col.read_only:
 				cell = _create_read_only_cell(value)
 			else:
 				var cur_filtered_idx: int = filtered_idx
-				var captured_prop_col: GRDPropertyColumn = prop_col
+				var captured_prop_col: GRDColumn = prop_col
 				var captured_key: String = key
 				var on_change: Callable = func(new_value: Variant) -> void:
 					var r_idx: int = _filtered_indices[cur_filtered_idx]
@@ -427,7 +427,7 @@ func _build_row(filtered_idx: int) -> void:
 						resource.emit_changed()
 					cell_changed.emit(r_idx, StringName(captured_key), new_value)
 					refresh_row_heights()
-				cell = GRDResourceCellEditorFactory.create_cell_editor(
+				cell = GRDCellEditorFactory.create_cell_editor(
 					prop_col, value, resource, on_change, _database_asset,
 				)
 		else:
@@ -555,15 +555,15 @@ static func _scaled_column_width(width: int) -> int:
 
 
 static func _column_type_text(col: Dictionary) -> String:
-	# Resource-first: use GRDPropertyColumn.
-	var prop_col: GRDPropertyColumn = col.get("property_column", null) as GRDPropertyColumn
+	# Resource-first: use GRDColumn.
+	var prop_col: GRDColumn = col.get("property_column", null) as GRDColumn
 	if prop_col != null:
 		return _property_column_type_text(prop_col)
 	return "INFERRED"
 
 
-## Returns a human-readable type string for a GRDPropertyColumn.
-static func _property_column_type_text(col: GRDPropertyColumn) -> String:
+## Returns a human-readable type string for a GRDColumn.
+static func _property_column_type_text(col: GRDColumn) -> String:
 	if col == null:
 		return ""
 	if col.is_enum():
@@ -600,14 +600,14 @@ static func _property_column_type_text(col: GRDPropertyColumn) -> String:
 func _create_read_only_cell(value: Variant) -> Control:
 	var vtype: int = typeof(value)
 	if vtype == TYPE_OBJECT and value is Resource:
-		return GRDResourceCellEditorFactory.read_only_label(
-			GRDResourceCellEditorFactory.resource_summary(value),
+		return GRDCellEditorFactory.read_only_label(
+			GRDCellEditorFactory.resource_summary(value),
 		)
-	if vtype in GRDResourceCellEditorFactory.SUMMARY_TYPES:
-		return GRDResourceCellEditorFactory.read_only_label(
-			GRDResourceCellEditorFactory.value_summary(value, vtype),
+	if vtype in GRDCellEditorFactory.SUMMARY_TYPES:
+		return GRDCellEditorFactory.read_only_label(
+			GRDCellEditorFactory.value_summary(value, vtype),
 		)
-	return GRDResourceCellEditorFactory.read_only_label(str(value) if value != null else "")
+	return GRDCellEditorFactory.read_only_label(str(value) if value != null else "")
 
 
 # ---------------------------------------------------------------------------
@@ -670,8 +670,8 @@ func _row_matches_search(row: GRDRow) -> bool:
 ## Returns a plain-text representation of a cell value suitable for search.
 static func _cell_display_text(value: Variant) -> String:
 	var vtype: int = typeof(value)
-	if vtype in GRDResourceCellEditorFactory.EDITABLE_SCALAR_TYPES or vtype == TYPE_NODE_PATH:
+	if vtype in GRDCellEditorFactory.EDITABLE_SCALAR_TYPES or vtype == TYPE_NODE_PATH:
 		return str(value) if value != null else ""
 	if vtype == TYPE_OBJECT and value is Resource:
-		return GRDResourceCellEditorFactory.resource_summary(value)
-	return GRDResourceCellEditorFactory.value_summary(value, vtype)
+		return GRDCellEditorFactory.resource_summary(value)
+	return GRDCellEditorFactory.value_summary(value, vtype)
