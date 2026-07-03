@@ -7,6 +7,7 @@ on:
       - "!addon-only/**"
     paths:
       - "addons/godot-resource-database/**"
+      - ".gitignore"
       - ".github/workflows/addon-only.yml"
   workflow_dispatch:
 
@@ -29,6 +30,18 @@ jobs:
           src_branch="${GITHUB_REF_NAME}"
           dst_branch="addon-only/${src_branch}"
 
+          git show HEAD:.gitignore > /tmp/addon-only.gitignore
           split_sha="$(git subtree split --prefix=addons/godot-resource-database HEAD)"
 
-          git push origin "${split_sha}:refs/heads/${dst_branch}" --force-with-lease
+          git switch --detach "${split_sha}"
+          cp /tmp/addon-only.gitignore .gitignore
+          git add .gitignore
+          git rm --cached --ignore-unmatch '*.uid' '*.import'
+
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Add addon-only gitignore"
+          fi
+
+          git push origin "HEAD:refs/heads/${dst_branch}" --force-with-lease
