@@ -12,6 +12,7 @@ signal cell_changed(row_index: int, key: StringName, new_value: Variant)
 signal row_selected(row_index: int)
 signal row_delete_requested(row_index: int)
 signal row_move_requested(from_index: int, to_index: int)
+signal add_row_requested()
 
 
 class RowDragHandle:
@@ -87,6 +88,7 @@ const _ROWS_PER_BUILD_CHUNK: int = 1
 # ---------------------------------------------------------------------------
 
 var _row_count_label: Label
+var _add_row_btn: Button
 var _body_scroll: ScrollContainer
 var _body: GridContainer
 var _sticky_cells: Array[Dictionary] = []
@@ -101,10 +103,19 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
+	var header: HBoxContainer = HBoxContainer.new()
+	add_child(header)
+
 	_row_count_label = Label.new()
 	_row_count_label.text = "0 rows"
 	GRDTheme.style_label(_row_count_label, GRDTheme.FONT_SIZE_SMALL, GRDTheme.TEXT_MUTED)
-	add_child(_row_count_label)
+	header.add_child(_row_count_label)
+
+	_add_row_btn = Button.new()
+	_add_row_btn.text = "+ Row"
+	_add_row_btn.tooltip_text = "Add row to the selected table"
+	_add_row_btn.pressed.connect(func() -> void: add_row_requested.emit())
+	header.add_child(_add_row_btn)
 
 	_body_scroll = ScrollContainer.new()
 	_body_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -165,6 +176,11 @@ func get_selected_row_index() -> int:
 	if _selected_filtered_idx >= 0 and _selected_filtered_idx < _filtered_indices.size():
 		return _filtered_indices[_selected_filtered_idx]
 	return -1
+
+
+func set_add_row_enabled(enabled: bool) -> void:
+	if _add_row_btn != null:
+		_add_row_btn.disabled = not enabled
 
 
 ## Rebuilds the grid from current data.
