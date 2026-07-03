@@ -659,12 +659,12 @@ func _update_button_states() -> void:
 	_set_actions_menu_disabled(_MENU_GENERATE_CONSTANTS, not has_db)
 
 	_schema_label.visible = has_table
-		if has_table:
-			_schema_label.text = "Table schema: %s" % _get_table_script_label(_selected_table_asset)
-			_table_dropdown.tooltip_text = _schema_label.text
-		else:
-			_schema_label.text = "Table schema: (none)"
-			_table_dropdown.tooltip_text = ""
+	if has_table:
+		_schema_label.text = "Table schema: %s" % _get_table_script_label(_selected_table_asset)
+		_table_dropdown.tooltip_text = _schema_label.text
+	else:
+		_schema_label.text = "Table schema: (none)"
+		_table_dropdown.tooltip_text = ""
 
 
 func _set_actions_menu_disabled(id: int, disabled: bool) -> void:

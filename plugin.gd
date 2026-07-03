@@ -57,7 +57,7 @@ func _get_plugin_name() -> String:
 
 
 func _get_plugin_icon() -> Texture2D:
-	return preload("res://addons/godot-resource-database/icon_tab.svg")
+	return load("res://addons/godot-resource-database/icon_tab.svg") as Texture2D
 
 
 func _make_visible(visible: bool) -> void:
