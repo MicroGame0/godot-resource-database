@@ -9,6 +9,7 @@ on:
       - "addons/godot-resource-database/**"
       - ".gitignore"
       - ".github/workflows/addon-only.yml"
+      - ".github/workflows/sync-addon-only-back.yml"
   workflow_dispatch:
 
 permissions:
@@ -35,7 +36,10 @@ jobs:
 
           git switch --detach "${split_sha}"
           cp /tmp/addon-only.gitignore .gitignore
+          mkdir -p .github/workflows
+          git show HEAD:.github/workflows/sync-addon-only-back.yml > .github/workflows/sync-addon-only-back.yml
           git add .gitignore
+          git add .github/workflows/sync-addon-only-back.yml
           git rm --cached --ignore-unmatch '*.uid' '*.import'
 
           if ! git diff --cached --quiet; then
