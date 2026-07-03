@@ -32,12 +32,13 @@ jobs:
           dst_branch="addon-only/${src_branch}"
 
           git show HEAD:.gitignore > /tmp/addon-only.gitignore
+          git show HEAD:.github/workflows/sync-addon-only-back.yml > /tmp/sync-addon-only-back.yml
           split_sha="$(git subtree split --prefix=addons/godot-resource-database HEAD)"
 
           git switch --detach "${split_sha}"
           cp /tmp/addon-only.gitignore .gitignore
           mkdir -p .github/workflows
-          git show HEAD:.github/workflows/sync-addon-only-back.yml > .github/workflows/sync-addon-only-back.yml
+          cp /tmp/sync-addon-only-back.yml .github/workflows/sync-addon-only-back.yml
           git add .gitignore
           git add .github/workflows/sync-addon-only-back.yml
           git rm --cached --ignore-unmatch '*.uid' '*.import'
