@@ -1,0 +1,50 @@
+name: Build release zip
+
+on:
+  push:
+    tags:
+      - "v*"
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release-zip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Build AssetLib zip
+        run: |
+          set -euo pipefail
+
+          version="${GITHUB_REF_NAME}"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            version="${{ github.event.release.tag_name }}"
+          fi
+          version="${version#v}"
+
+          zip_name="godot-resource-database-${version}.zip"
+
+          mkdir -p dist
+          git archive --format=zip --output="dist/${zip_name}" HEAD
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-resource-database-release-zip
+          path: dist/*.zip
+          if-no-files-found: error
+
+      - name: Attach zip to GitHub release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/*.zip --clobber
