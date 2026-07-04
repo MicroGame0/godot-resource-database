@@ -2,6 +2,8 @@
 class_name GRDCellEditorFactory
 extends RefCounted
 
+const GRDConstants = preload("res://addons/godot-resource-database/grd_constants.gd")
+
 ## Resource-first cell editor factory.  Uses GRDColumn metadata
 ## derived from Godot exported properties.  No schema/type system dependencies.
 ##
@@ -38,7 +40,7 @@ class StructuredRowDragHandle:
 		if row_index < 0:
 			return null
 		var preview := Label.new()
-		preview.text = "Move row %d" % row_index
+		preview.text = GRDConstants.translate("rows.move") % row_index
 		GRDTheme.style_label(preview, GRDTheme.FONT_SIZE_SMALL, GRDTheme.TEXT)
 		set_drag_preview(preview)
 		return {
@@ -248,7 +250,7 @@ static func _create_file_path_editor(col: GRDColumn, value: Variant, on_change: 
 	box.add_child(edit)
 
 	var browse_btn: Button = Button.new()
-	browse_btn.text = "…"
+	browse_btn.text = GRDConstants.translate("cell.browse")
 	browse_btn.custom_minimum_size = Vector2(GRDTheme.scaled(28.0), _compact_control_height())
 	browse_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	GRDTheme.style_button(browse_btn)
@@ -275,7 +277,7 @@ static func _create_file_path_editor(col: GRDColumn, value: Variant, on_change: 
 	# Browse button opens EditorFileDialog.
 	browse_btn.pressed.connect(func() -> void:
 		var fd: EditorFileDialog = EditorFileDialog.new()
-		fd.title = "Select %s" % col.get_display_name()
+		fd.title = GRDConstants.translate("dialog.select_file") % col.get_display_name()
 		fd.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
 		if col.is_global_file_path():
 			fd.access = EditorFileDialog.ACCESS_FILESYSTEM
@@ -508,8 +510,8 @@ static func _create_empty_cell_resource_stub(col: GRDColumn, base_script: Script
 	row.add_child(label)
 
 	var add_btn: Button = Button.new()
-	add_btn.text = "+ Add"
-	add_btn.tooltip_text = "Create %s" % col.get_resource_type()
+	add_btn.text = GRDConstants.translate("cell.add")
+	add_btn.tooltip_text = GRDConstants.translate("cell.add.tooltip") % col.get_resource_type()
 	add_btn.custom_minimum_size.y = _compact_control_height()
 	GRDTheme.style_button(add_btn)
 	row.add_child(add_btn)
@@ -629,7 +631,7 @@ static func _create_array_editor(
 	box.add_child(summary)
 
 	var edit_btn: Button = Button.new()
-	edit_btn.text = "Edit"
+	edit_btn.text = GRDConstants.translate("cell.edit")
 	edit_btn.custom_minimum_size.y = _compact_control_height()
 	edit_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	box.add_child(edit_btn)
@@ -650,7 +652,7 @@ static func _open_array_edit_popup(
 	on_change: Callable,
 ) -> void:
 	var popup: PopupPanel = PopupPanel.new()
-	popup.title = "Edit %s" % col.get_display_name()
+	popup.title = GRDConstants.translate("cell.edit.title") % col.get_display_name()
 	popup.min_size = Vector2i(420, 300)
 
 	var outer: VBoxContainer = VBoxContainer.new()
@@ -659,7 +661,7 @@ static func _open_array_edit_popup(
 	popup.add_child(outer)
 
 	var info: Label = Label.new()
-	info.text = "Edit the array value (JSON format)."
+	info.text = GRDConstants.translate("cell.edit.info")
 	GRDTheme.style_label(info, GRDTheme.FONT_SIZE_SMALL, GRDTheme.TEXT_MUTED)
 	outer.add_child(info)
 
@@ -677,11 +679,11 @@ static func _open_array_edit_popup(
 	outer.add_child(buttons)
 
 	var apply_btn: Button = Button.new()
-	apply_btn.text = "Apply"
+	apply_btn.text = GRDConstants.translate("cell.apply")
 	buttons.add_child(apply_btn)
 
 	var cancel_btn: Button = Button.new()
-	cancel_btn.text = "Cancel"
+	cancel_btn.text = GRDConstants.translate("cell.cancel")
 	buttons.add_child(cancel_btn)
 
 	apply_btn.pressed.connect(func() -> void:
@@ -690,7 +692,7 @@ static func _open_array_edit_popup(
 			on_change.call(parsed)
 			popup.queue_free()
 		else:
-			status.text = "Invalid JSON — must be an array."
+			status.text = GRDConstants.translate("cell.json.error")
 	)
 	cancel_btn.pressed.connect(func() -> void:
 		popup.queue_free()
@@ -823,7 +825,7 @@ static func _rebuild_row_reference_array_inline(
 		row.add_child(option)
 
 		var remove_btn: Button = Button.new()
-		remove_btn.text = "x"
+		remove_btn.text = GRDConstants.translate("cell.remove")
 		remove_btn.custom_minimum_size = Vector2(GRDTheme.scaled(28.0), _compact_control_height())
 		GRDTheme.style_button(remove_btn)
 		remove_btn.pressed.connect(func() -> void:
@@ -836,7 +838,7 @@ static func _rebuild_row_reference_array_inline(
 	var add_row: HBoxContainer = HBoxContainer.new()
 	add_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var add_btn: Button = Button.new()
-	add_btn.text = "+ Add %s" % _array_item_label(col, _resolve_structured_array_element_script(col, template_value))
+	add_btn.text = GRDConstants.translate("cell.add.format") % _array_item_label(col, _resolve_structured_array_element_script(col, template_value))
 	add_btn.custom_minimum_size.y = _compact_control_height()
 	GRDTheme.style_button(add_btn)
 	add_btn.pressed.connect(func() -> void:
@@ -856,7 +858,7 @@ static func _structured_array_summary(value: Variant) -> String:
 		return str(value) if value != null else "(null)"
 	var arr: Array = value as Array
 	if arr.is_empty():
-		return "0 rows"
+		return GRDConstants.translate("rows.zero")
 	var count: int = arr.size()
 	return "%d row%s" % [count, "s" if count != 1 else ""]
 
@@ -929,7 +931,7 @@ static func _rebuild_structured_array_inline(
 		var empty_row: HBoxContainer = HBoxContainer.new()
 		empty_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var empty_label: Label = Label.new()
-		empty_label.text = "0 rows"
+		empty_label.text = GRDConstants.translate("rows.zero")
 		empty_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		GRDTheme.style_label(empty_label, GRDTheme.FONT_SIZE_SMALL, GRDTheme.TEXT_MUTED)
 		empty_row.add_child(empty_label)
@@ -1020,7 +1022,7 @@ static func _add_inline_add_button(
 	on_change: Callable,
 ) -> void:
 	var add_btn: Button = Button.new()
-	add_btn.text = "+ Add %s" % _array_item_label(col, elem_script) if _uses_nested_cell_card_layout(element_columns) else "+ Add Row"
+	add_btn.text = GRDConstants.translate("cell.add.format") % _array_item_label(col, elem_script) if _uses_nested_cell_card_layout(element_columns) else GRDConstants.translate("cell.add.row")
 	add_btn.custom_minimum_size.y = _compact_control_height()
 	add_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	GRDTheme.style_button(add_btn)
@@ -1101,8 +1103,8 @@ static func _build_structured_card_row(
 	drag_handle.owner_id = parent.get_instance_id()
 	drag_handle.row_index = item_index
 	drag_handle.on_move = on_move
-	drag_handle.text = "☰"
-	drag_handle.tooltip_text = "Drag to reorder %s" % item_label.to_lower()
+	drag_handle.text = GRDConstants.translate("cell.drag_handle")
+	drag_handle.tooltip_text = GRDConstants.translate("toolbar.tooltip.drag_item") % item_label.to_lower()
 	drag_handle.focus_mode = Control.FOCUS_NONE
 	drag_handle.mouse_default_cursor_shape = Control.CURSOR_MOVE
 	drag_handle.custom_minimum_size = Vector2(GRDTheme.scaled(24.0), _compact_control_height())
@@ -1111,13 +1113,13 @@ static func _build_structured_card_row(
 	header.add_child(drag_handle)
 
 	var title: Label = Label.new()
-	title.text = "%s %d" % [item_label, item_number]
+	title.text = GRDConstants.translate("rows.number.format") % [item_label, item_number]
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	GRDTheme.style_label(title, GRDTheme.FONT_SIZE_SMALL, GRDTheme.TEXT)
 	header.add_child(title)
 
 	var remove_btn: Button = Button.new()
-	remove_btn.text = "×"
+	remove_btn.text = GRDConstants.translate("cell.remove_alt")
 	remove_btn.focus_mode = Control.FOCUS_NONE
 	remove_btn.custom_minimum_size = Vector2(GRDTheme.scaled(24.0), _compact_control_height())
 	GRDTheme.style_button(remove_btn)
@@ -1179,7 +1181,7 @@ static func _create_array_editor_fallback(
 	box.add_child(summary)
 
 	var edit_btn: Button = Button.new()
-	edit_btn.text = "Edit"
+	edit_btn.text = GRDConstants.translate("cell.edit")
 	edit_btn.custom_minimum_size.y = _compact_control_height()
 	edit_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	box.add_child(edit_btn)
@@ -1211,7 +1213,7 @@ static func _open_structured_array_popup(
 		return
 
 	var popup: PopupPanel = PopupPanel.new()
-	popup.title = "Edit %s" % col.get_display_name()
+	popup.title = GRDConstants.translate("cell.edit.title") % col.get_display_name()
 	popup.min_size = Vector2i(540, 380)
 
 	var outer: VBoxContainer = VBoxContainer.new()
@@ -1251,7 +1253,7 @@ static func _open_structured_array_popup(
 	outer.add_child(bottom)
 
 	var add_btn: Button = Button.new()
-	add_btn.text = "+ Add Row"
+	add_btn.text = GRDConstants.translate("cell.add.row")
 	GRDTheme.style_button(add_btn)
 	add_btn.pressed.connect(func() -> void:
 		var new_elem = elem_script.new()
@@ -1266,7 +1268,7 @@ static func _open_structured_array_popup(
 	bottom.add_child(spacer)
 
 	var cancel_btn: Button = Button.new()
-	cancel_btn.text = "Cancel"
+	cancel_btn.text = GRDConstants.translate("cell.cancel")
 	GRDTheme.style_button(cancel_btn)
 	cancel_btn.pressed.connect(func() -> void:
 		popup.queue_free()
@@ -1274,7 +1276,7 @@ static func _open_structured_array_popup(
 	bottom.add_child(cancel_btn)
 
 	var apply_btn: Button = Button.new()
-	apply_btn.text = "Apply"
+	apply_btn.text = GRDConstants.translate("cell.apply")
 	GRDTheme.style_button(apply_btn, true)
 	apply_btn.pressed.connect(func() -> void:
 		var result: Array = []
@@ -1378,8 +1380,8 @@ static func _build_structured_row(
 	drag_handle.owner_id = grid.get_instance_id()
 	drag_handle.row_index = row_index
 	drag_handle.on_move = on_move
-	drag_handle.text = "☰"
-	drag_handle.tooltip_text = "Drag to reorder row"
+	drag_handle.text = GRDConstants.translate("cell.drag_handle")
+	drag_handle.tooltip_text = GRDConstants.translate("toolbar.tooltip.drag_row")
 	drag_handle.focus_mode = Control.FOCUS_NONE
 	drag_handle.mouse_default_cursor_shape = Control.CURSOR_MOVE
 	drag_handle.custom_minimum_size = Vector2(GRDTheme.scaled(24.0), _compact_control_height())
@@ -1398,7 +1400,7 @@ static func _build_structured_row(
 
 	# Remove button.
 	var remove_btn: Button = Button.new()
-	remove_btn.text = "×"
+	remove_btn.text = GRDConstants.translate("cell.remove_alt")
 	remove_btn.focus_mode = Control.FOCUS_NONE
 	remove_btn.custom_minimum_size = Vector2(GRDTheme.scaled(24.0), _compact_control_height())
 	remove_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER

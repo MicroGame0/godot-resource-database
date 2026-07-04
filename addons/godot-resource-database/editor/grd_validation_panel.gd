@@ -2,6 +2,8 @@
 class_name GRDValidationPanel
 extends VBoxContainer
 
+const GRDConstants = preload("res://addons/godot-resource-database/grd_constants.gd")
+
 ## Displays GRDDatabase.validate() issues in a collapsible panel with
 ## severity-colored entries.  No broad new validation rules are added;
 ## this is a display component for existing GRDValidationIssue data.
@@ -20,7 +22,7 @@ func _build_ui() -> void:
 	add_child(header)
 
 	_toggle_btn = Button.new()
-	_toggle_btn.text = "Validation (0 issues)"
+	_toggle_btn.text = GRDConstants.translate("validation.issue.zero")
 	_toggle_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	GRDTheme.style_button(_toggle_btn)
 	_toggle_btn.pressed.connect(_on_toggle)
@@ -40,12 +42,10 @@ func _build_ui() -> void:
 ## Replaces the displayed issues.
 func set_issues(issues: Array[GRDValidationIssue]) -> void:
 	var count: int = issues.size()
-	_toggle_btn.text = "Validation (%d issue%s)" % [
-		count, "" if count == 1 else "s",
-	]
+	_toggle_btn.text = GRDConstants.translate("validation.issue.count") % [count, "" if count == 1 else "s"]
 
 	if issues.is_empty():
-		_issue_rtl.text = "[color=#%s]No issues found.[/color]" % GRDTheme.SUCCESS.to_html(false)
+		_issue_rtl.text = "[color=#%s]%s[/color]" % [GRDTheme.SUCCESS.to_html(false), GRDConstants.translate("validation.no_issues")]
 		_issue_rtl.visible = true
 		return
 
@@ -66,7 +66,7 @@ func set_issues(issues: Array[GRDValidationIssue]) -> void:
 
 ## Clears all displayed issues.
 func clear() -> void:
-	_toggle_btn.text = "Validation (0 issues)"
+	_toggle_btn.text = GRDConstants.translate("validation.issue.zero")
 	_issue_rtl.text = ""
 	_issue_rtl.visible = false
 

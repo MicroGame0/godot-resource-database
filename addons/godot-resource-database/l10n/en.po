@@ -1,0 +1,260 @@
+# English translations for Godot Resource Database
+msgid ""
+msgstr ""
+"Project-Id-Version: Godot Resource Database\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "plugin.name"
+msgstr "Resource Database"
+
+msgid "menu.file"
+msgstr "File"
+
+msgid "menu.table"
+msgstr "Table"
+
+msgid "menu.browse"
+msgstr "Browse..."
+
+msgid "menu.refresh"
+msgstr "Refresh"
+
+msgid "menu.database"
+msgstr "Database"
+
+msgid "menu.generate"
+msgstr "Generate"
+
+msgid "menu.advanced"
+msgstr "Advanced"
+
+msgid "menu.create"
+msgstr "Create..."
+
+msgid "menu.load"
+msgstr "Load..."
+
+msgid "menu.save"
+msgstr "Save"
+
+msgid "menu.validate"
+msgstr "Validate"
+
+msgid "menu.add"
+msgstr "Add"
+
+msgid "menu.edit"
+msgstr "Edit"
+
+msgid "menu.delete"
+msgstr "Delete"
+
+msgid "menu.gdscript_constants"
+msgstr "GDScript Constants"
+
+msgid "menu.table_script"
+msgstr "Table Script..."
+
+msgid "menu.cell_script"
+msgstr "Cell Script..."
+
+msgid "menu.column_script"
+msgstr "Column Script..."
+
+msgid "menu.reload_plugin"
+msgstr "Reload plugin"
+
+msgid "toolbar.name"
+msgstr "Toolbar"
+
+msgid "toolbar.tooltip.actions"
+msgstr "Database, table, generation, and plugin actions"
+
+msgid "toolbar.tooltip.refresh"
+msgstr "Reload the open database and schema scripts from disk"
+
+msgid "toolbar.tooltip.add_row"
+msgstr "Add row to the selected table"
+
+msgid "toolbar.tooltip.delete_row"
+msgstr "Remove row"
+
+msgid "toolbar.tooltip.drag_row"
+msgstr "Drag to reorder row"
+
+msgid "toolbar.tooltip.drag_item"
+msgstr "Drag to reorder %s"
+
+msgid "rows.zero"
+msgstr "0 rows"
+
+msgid "rows.count"
+msgstr "%d rows"
+
+msgid "rows.filtered"
+msgstr "%d / %d rows"
+
+msgid "rows.move"
+msgstr "Move row %d"
+
+msgid "rows.number.format"
+msgstr "%s %d"
+
+msgid "column.number"
+msgstr "#"
+
+msgid "filter.placeholder"
+msgstr "Filter rows..."
+
+msgid "toolbar.table"
+msgstr "Table:"
+
+msgid "toolbar.table.schema"
+msgstr "Table schema:"
+
+msgid "toolbar.table.schema.none"
+msgstr "Table schema: (none)"
+
+msgid "toolbar.table.schema.format"
+msgstr "Table schema: %s"
+
+msgid "toolbar.search"
+msgstr "Search:"
+
+msgid "toolbar.add_row"
+msgstr "+ Row"
+
+msgid "toolbar.save"
+msgstr "Save"
+
+msgid "toolbar.save.clean"
+msgstr "Save (clean)"
+
+msgid "toolbar.more"
+msgstr "More"
+
+msgid "toolbar.refresh"
+msgstr "Refresh"
+
+msgid "toolbar.add_table"
+msgstr "Add table"
+
+msgid "toolbar.edit_table"
+msgstr "Edit table"
+
+msgid "toolbar.delete_table"
+msgstr "Delete table"
+
+msgid "toolbar.delete_table.title"
+msgstr "Delete Table"
+
+msgid "toolbar.delete_table.confirm"
+msgstr "Delete table '%s' and all its rows?"
+
+msgid "toolbar.generate_constants"
+msgstr "Generate GDScript constants"
+
+msgid "toolbar.validate"
+msgstr "Validate"
+
+msgid "toolbar.export_csv"
+msgstr "Export as CSV"
+
+msgid "toolbar.create_database"
+msgstr "Create GRDDatabaseAsset"
+
+msgid "toolbar.open_database"
+msgstr "Open GRDDatabaseAsset"
+
+msgid "toolbar.create_table"
+msgstr "Create Table"
+
+msgid "toolbar.edit_table.title"
+msgstr "Edit Table"
+
+msgid "toolbar.script_picker.tooltip"
+msgstr "Resource script used to create rows and derive columns."
+
+msgid "dialog.button.create"
+msgstr "Create"
+
+msgid "dialog.button.apply"
+msgstr "Apply"
+
+msgid "cell.browse"
+msgstr "…"
+
+msgid "cell.add"
+msgstr "+ Add"
+
+msgid "cell.add.format"
+msgstr "+ Add %s"
+
+msgid "cell.add.row"
+msgstr "+ Add Row"
+
+msgid "cell.add.tooltip"
+msgstr "Create %s"
+
+msgid "cell.edit"
+msgstr "Edit"
+
+msgid "cell.edit.info"
+msgstr "Edit the array value (JSON format)."
+
+msgid "cell.edit.title"
+msgstr "Edit %s"
+
+msgid "cell.apply"
+msgstr "Apply"
+
+msgid "cell.cancel"
+msgstr "Cancel"
+
+msgid "cell.json.error"
+msgstr "Invalid JSON — must be an array."
+
+msgid "cell.remove"
+msgstr "x"
+
+msgid "cell.drag_handle"
+msgstr "☰"
+
+msgid "cell.remove_alt"
+msgstr "×"
+
+msgid "validation.title"
+msgstr "Validation"
+
+msgid "validation.issues"
+msgstr "%d issues"
+
+msgid "validation.issue.zero"
+msgstr "Validation (0 issues)"
+
+msgid "validation.issue.count"
+msgstr "Validation (%d issues)"
+
+msgid "validation.no_issues"
+msgstr "No issues found."
+
+msgid "validation.issue.warning"
+msgstr "Warning: %s"
+
+msgid "validation.issue.error"
+msgstr "Error: %s"
+
+msgid "dialog.table_name"
+msgstr "Table name:"
+
+msgid "dialog.row_script"
+msgstr "Row script:"
+
+msgid "dialog.select_file"
+msgstr "Select %s"
+
+msgid "status.generated"
+msgstr "Generated constants: %s"

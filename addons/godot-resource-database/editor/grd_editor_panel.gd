@@ -2,6 +2,8 @@
 class_name GRDEditorPanel
 extends VBoxContainer
 
+const GRDConstants = preload("res://addons/godot-resource-database/grd_constants.gd")
+
 ## Resource-first editor panel for Godot Resource Database.
 ## Provides: toolbar (DB path, table dropdown, search, add/remove row,
 ## validate, save), spreadsheet grid view, validation panel, dirty tracking.
@@ -93,19 +95,19 @@ func _ready() -> void:
 func _build_ui() -> void:
 	# ── Toolbar ──────────────────────────────────────────────────────
 	var toolbar: HBoxContainer = HBoxContainer.new()
-	toolbar.name = "Toolbar"
+	toolbar.name = GRDConstants.translate("toolbar.name")
 	add_child(toolbar)
 
 	_actions_menu = MenuButton.new()
-	_actions_menu.text = "File"
-	_actions_menu.tooltip_text = "Database, table, generation, and plugin actions"
+	_actions_menu.text = GRDConstants.translate("menu.file")
+	_actions_menu.tooltip_text = GRDConstants.translate("toolbar.tooltip.actions")
 	_build_actions_menu()
 	toolbar.add_child(_actions_menu)
 
 	toolbar.add_child(_vsep())
 
 	var tbl_label: Label = Label.new()
-	tbl_label.text = "Table:"
+	tbl_label.text = GRDConstants.translate("toolbar.table")
 	toolbar.add_child(tbl_label)
 
 	_table_dropdown = OptionButton.new()
@@ -117,28 +119,28 @@ func _build_ui() -> void:
 
 	# Table schema summary. Schema changes live in the table dialog so they are deliberate.
 	_schema_label = Label.new()
-	_schema_label.text = "Table schema: (none)"
+	_schema_label.text = GRDConstants.translate("toolbar.table.schema.none")
 	_schema_label.visible = false
 
 	var search_label: Label = Label.new()
-	search_label.text = "Search:"
+	search_label.text = GRDConstants.translate("toolbar.search")
 	toolbar.add_child(search_label)
 
 	_search_edit = LineEdit.new()
-	_search_edit.placeholder_text = "Filter rows..."
+	_search_edit.placeholder_text = GRDConstants.translate("filter.placeholder")
 	_search_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_search_edit.size_flags_stretch_ratio = 1.0
 	_search_edit.text_changed.connect(_on_search_changed)
 	toolbar.add_child(_search_edit)
 
 	_refresh_btn = Button.new()
-	_refresh_btn.text = "Refresh"
-	_refresh_btn.tooltip_text = "Reload the open database and schema scripts from disk"
+	_refresh_btn.text = GRDConstants.translate("toolbar.refresh")
+	_refresh_btn.tooltip_text = GRDConstants.translate("toolbar.tooltip.refresh")
 	_refresh_btn.pressed.connect(_on_refresh_database_pressed)
 	toolbar.add_child(_refresh_btn)
 
 	_save_btn = Button.new()
-	_save_btn.text = "Save"
+	_save_btn.text = GRDConstants.translate("toolbar.save")
 	_save_btn.pressed.connect(_on_save_pressed)
 	toolbar.add_child(_save_btn)
 
@@ -184,38 +186,38 @@ static func _vsep() -> VSeparator:
 func _build_actions_menu() -> void:
 	var popup := _actions_menu.get_popup()
 	popup.clear()
-	_add_submenu(popup, "Database", "DatabaseMenu", [
-		{"label": "Create...", "id": _MENU_CREATE_DATABASE},
-		{"label": "Load...", "id": _MENU_LOAD_DATABASE},
-		{"label": "Save", "id": _MENU_SAVE},
+	_add_submenu(popup, GRDConstants.translate("menu.database"), "DatabaseMenu", [
+		{"label": GRDConstants.translate("menu.create"), "id": _MENU_CREATE_DATABASE},
+		{"label": GRDConstants.translate("menu.load"), "id": _MENU_LOAD_DATABASE},
+		{"label": GRDConstants.translate("menu.save"), "id": _MENU_SAVE},
 		{"separator": true},
-		{"label": "Validate", "id": _MENU_VALIDATE},
+		{"label": GRDConstants.translate("menu.validate"), "id": _MENU_VALIDATE},
 	])
-	_add_submenu(popup, "Table", "TableMenu", [
-		{"label": "Add", "id": _MENU_ADD_TABLE},
-		{"label": "Edit", "id": _MENU_EDIT_TABLE},
-		{"label": "Delete", "id": _MENU_DELETE_TABLE},
+	_add_submenu(popup, GRDConstants.translate("menu.table"), "TableMenu", [
+		{"label": GRDConstants.translate("menu.add"), "id": _MENU_ADD_TABLE},
+		{"label": GRDConstants.translate("menu.edit"), "id": _MENU_EDIT_TABLE},
+		{"label": GRDConstants.translate("menu.delete"), "id": _MENU_DELETE_TABLE},
 	])
-	_add_submenu(popup, "Generate", "GenerateMenu", [
-		{"label": "GDScript Constants", "id": _MENU_GENERATE_CONSTANTS},
+	_add_submenu(popup, GRDConstants.translate("menu.generate"), "GenerateMenu", [
+		{"label": GRDConstants.translate("menu.gdscript_constants"), "id": _MENU_GENERATE_CONSTANTS},
 		{
-			"label": "Table Script...",
+			"label": GRDConstants.translate("menu.table_script"),
 			"id": _MENU_GENERATE_TABLE_SCRIPT,
 			"tooltip": "Create a GRDTableSchema script. Exported properties become editable table columns.",
 		},
 		{
-			"label": "Cell Script...",
+			"label": GRDConstants.translate("menu.cell_script"),
 			"id": _MENU_GENERATE_CELL_SCRIPT,
 			"tooltip": "Create a GRDCell script for reusable nested cell data.",
 		},
 		{
-			"label": "Column Script...",
+			"label": GRDConstants.translate("menu.column_script"),
 			"id": _MENU_GENERATE_COLUMN_SCRIPT,
 			"tooltip": "Create a GRDColumn script for advanced column metadata behavior.",
 		},
 	])
-	_add_submenu(popup, "Advanced", "AdvancedMenu", [
-		{"label": "Reload plugin", "id": _MENU_REFRESH},
+	_add_submenu(popup, GRDConstants.translate("menu.advanced"), "AdvancedMenu", [
+		{"label": GRDConstants.translate("menu.reload_plugin"), "id": _MENU_REFRESH},
 	])
 	GRDTheme.style_popup_menu(popup)
 
@@ -705,7 +707,7 @@ func _update_button_states() -> void:
 	_table_dropdown.disabled = not has_db or _table_dropdown.get_item_count() == 0
 	_refresh_btn.disabled = not has_db
 	_save_btn.disabled = not has_dirty
-	_save_btn.text = "Save" if has_dirty else "Save (clean)"
+	_save_btn.text = GRDConstants.translate("toolbar.save") if has_dirty else GRDConstants.translate("toolbar.save.clean")
 	_set_actions_menu_disabled(_MENU_SAVE, not has_dirty)
 	_set_actions_menu_disabled(_MENU_VALIDATE, not has_db)
 	_set_actions_menu_disabled(_MENU_ADD_TABLE, not has_db)
@@ -715,10 +717,10 @@ func _update_button_states() -> void:
 
 	_schema_label.visible = has_table
 	if has_table:
-		_schema_label.text = "Table schema: %s" % _get_table_script_label(_selected_table_asset)
+		_schema_label.text = GRDConstants.translate("toolbar.table.schema.format") % _get_table_script_label(_selected_table_asset)
 		_table_dropdown.tooltip_text = _schema_label.text
 	else:
-		_schema_label.text = "Table schema: (none)"
+		_schema_label.text = GRDConstants.translate("toolbar.table.schema.none")
 		_table_dropdown.tooltip_text = ""
 
 
@@ -760,7 +762,7 @@ func _on_create_database_pressed() -> void:
 		_create_database_dialog = EditorFileDialog.new()
 		_create_database_dialog.file_mode = EditorFileDialog.FILE_MODE_SAVE_FILE
 		_create_database_dialog.access = EditorFileDialog.ACCESS_RESOURCES
-		_create_database_dialog.title = "Create GRDDatabaseAsset"
+		_create_database_dialog.title = GRDConstants.translate("toolbar.create_database")
 		_create_database_dialog.filters = PackedStringArray([
 			"*.tres ; TRES Files", "*.res ; RES Files",
 		])
@@ -794,7 +796,7 @@ func _on_browse_pressed() -> void:
 		_browse_dialog = EditorFileDialog.new()
 		_browse_dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
 		_browse_dialog.access = EditorFileDialog.ACCESS_RESOURCES
-		_browse_dialog.title = "Open GRDDatabaseAsset"
+		_browse_dialog.title = GRDConstants.translate("toolbar.open_database")
 		_browse_dialog.filters = PackedStringArray([
 			"*.tres ; TRES Files", "*.res ; RES Files",
 		])
@@ -981,8 +983,8 @@ func _on_add_table_pressed() -> void:
 		return
 	_ensure_table_dialog()
 	_editing_table_asset = null
-	_table_dialog.title = "Create Table"
-	_table_dialog.ok_button_text = "Create"
+	_table_dialog.title = GRDConstants.translate("toolbar.create_table")
+	_table_dialog.ok_button_text = GRDConstants.translate("dialog.button.create")
 	_table_name_edit.text = _next_unique_table_name()
 	_populate_table_script_picker(null)
 	_table_dialog.popup_centered(Vector2i(420, 170))
@@ -993,8 +995,8 @@ func _on_edit_table_pressed() -> void:
 		return
 	_ensure_table_dialog()
 	_editing_table_asset = _selected_table_asset
-	_table_dialog.title = "Edit Table"
-	_table_dialog.ok_button_text = "Apply"
+	_table_dialog.title = GRDConstants.translate("toolbar.edit_table.title")
+	_table_dialog.ok_button_text = GRDConstants.translate("cell.apply")
 	_table_name_edit.text = String(_selected_table_asset.table_name)
 	_populate_table_script_picker(_selected_table_asset.schema)
 	_table_dialog.popup_centered(Vector2i(420, 170))
@@ -1005,7 +1007,7 @@ func _on_delete_table_pressed() -> void:
 		return
 	var table_name: StringName = _selected_table_asset.table_name
 	_ensure_delete_table_dialog()
-	_delete_table_label.text = "Delete table '%s' and all its rows?" % String(table_name)
+	_delete_table_label.text = GRDConstants.translate("toolbar.delete_table.confirm") % String(table_name)
 	_delete_table_dialog.popup_centered(Vector2i(380, 100))
 
 
@@ -1013,21 +1015,21 @@ func _ensure_table_dialog() -> void:
 	if _table_dialog != null:
 		return
 	_table_dialog = AcceptDialog.new()
-	_table_dialog.title = "Create Table"
-	_table_dialog.ok_button_text = "Create"
+	_table_dialog.title = GRDConstants.translate("toolbar.create_table")
+	_table_dialog.ok_button_text = GRDConstants.translate("dialog.button.create")
 	var box: VBoxContainer = VBoxContainer.new()
 	_table_dialog.add_child(box)
 	var label: Label = Label.new()
-	label.text = "Table name:"
+	label.text = GRDConstants.translate("dialog.table_name")
 	box.add_child(label)
 	_table_name_edit = LineEdit.new()
 	_table_name_edit.placeholder_text = "items"
 	box.add_child(_table_name_edit)
 	var script_label: Label = Label.new()
-	script_label.text = "Table schema:"
+	script_label.text = GRDConstants.translate("toolbar.table.schema")
 	box.add_child(script_label)
 	_table_script_picker = OptionButton.new()
-	_table_script_picker.tooltip_text = "Resource script used to create rows and derive columns."
+	_table_script_picker.tooltip_text = GRDConstants.translate("toolbar.script_picker.tooltip")
 	box.add_child(_table_script_picker)
 	_table_dialog.confirmed.connect(_create_table_from_dialog)
 	add_child(_table_dialog)
@@ -1086,7 +1088,7 @@ func _ensure_delete_table_dialog() -> void:
 	if _delete_table_dialog != null:
 		return
 	_delete_table_dialog = ConfirmationDialog.new()
-	_delete_table_dialog.title = "Delete Table"
+	_delete_table_dialog.title = GRDConstants.translate("toolbar.delete_table.title")
 	_delete_table_label = Label.new()
 	_delete_table_label.text = ""
 	_delete_table_dialog.add_child(_delete_table_label)
