@@ -2,6 +2,8 @@
 class_name GRDSpreadsheetView
 extends VBoxContainer
 
+const GRDConstants = preload("res://addons/godot-resource-database/grd_constants.gd")
+
 ## Spreadsheet-like table view that renders GRDRow data in a grid with
 ## inline cell editors.  Resource-first architecture only: columns are
 ## derived from GRDColumn via schema exported properties.
@@ -25,7 +27,7 @@ class RowDragHandle:
 		if view == null or row_index < 0:
 			return null
 		var preview := Label.new()
-		preview.text = "Move row %d" % row_index
+		preview.text = GRDConstants.translate("rows.move") % row_index
 		GRDTheme.style_label(preview, GRDTheme.FONT_SIZE_SMALL, GRDTheme.TEXT)
 		set_drag_preview(preview)
 		return {
@@ -107,13 +109,13 @@ func _build_ui() -> void:
 	add_child(header)
 
 	_row_count_label = Label.new()
-	_row_count_label.text = "0 rows"
+	_row_count_label.text = GRDConstants.translate("rows.zero")
 	GRDTheme.style_label(_row_count_label, GRDTheme.FONT_SIZE_SMALL, GRDTheme.TEXT_MUTED)
 	header.add_child(_row_count_label)
 
 	_add_row_btn = Button.new()
-	_add_row_btn.text = "+ Row"
-	_add_row_btn.tooltip_text = "Add row to the selected table"
+	_add_row_btn.text = GRDConstants.translate("toolbar.add_row")
+	_add_row_btn.tooltip_text = GRDConstants.translate("toolbar.tooltip.add_row")
 	_add_row_btn.pressed.connect(func() -> void: add_row_requested.emit())
 	header.add_child(_add_row_btn)
 
@@ -244,7 +246,7 @@ func _rebuild_grid() -> void:
 	var filter_start_ms: int = Time.get_ticks_msec()
 	_filter_rows()
 	var filter_ms: int = Time.get_ticks_msec() - filter_start_ms
-	_row_count_label.text = "%d / %d rows" % [_filtered_indices.size(), _rows.size()]
+	_row_count_label.text = GRDConstants.translate("rows.filtered") % [_filtered_indices.size(), _rows.size()]
 	_body.columns = _columns.size() + 1
 
 	var header_start_ms: int = Time.get_ticks_msec()
@@ -296,7 +298,7 @@ func _build_header() -> void:
 	var num_header: PanelContainer = _wrap_grid_cell(Label.new(), _scaled_row_number_width(), true, GRDTheme.BG, true)
 	header_panels.append(num_header)
 	var num_label: Label = num_header.get_child(0) as Label
-	num_label.text = "#"
+	num_label.text = GRDConstants.translate("column.number")
 	GRDTheme.style_label(num_label, GRDTheme.FONT_SIZE_SMALL, GRDTheme.TEXT)
 	num_label.add_theme_constant_override("outline_size", 1)
 	_body.add_child(num_header)
@@ -377,8 +379,8 @@ func _build_row(filtered_idx: int) -> void:
 	var drag_handle := RowDragHandle.new()
 	drag_handle.view = self
 	drag_handle.row_index = real_idx
-	drag_handle.text = "☰"
-	drag_handle.tooltip_text = "Drag to reorder row"
+	drag_handle.text = GRDConstants.translate("cell.drag_handle")
+	drag_handle.tooltip_text = GRDConstants.translate("toolbar.tooltip.drag_row")
 	drag_handle.focus_mode = Control.FOCUS_NONE
 	drag_handle.mouse_default_cursor_shape = Control.CURSOR_MOVE
 	drag_handle.custom_minimum_size = Vector2(GRDTheme.scaled(18.0), GRDTheme.scaled(22.0))
@@ -392,8 +394,8 @@ func _build_row(filtered_idx: int) -> void:
 	row_actions.add_child(drag_handle)
 
 	var delete_btn := Button.new()
-	delete_btn.text = "×"
-	delete_btn.tooltip_text = "Remove row"
+	delete_btn.text = GRDConstants.translate("cell.remove_alt")
+	delete_btn.tooltip_text = GRDConstants.translate("toolbar.tooltip.delete_row")
 	delete_btn.focus_mode = Control.FOCUS_NONE
 	delete_btn.custom_minimum_size = Vector2(GRDTheme.scaled(22.0), GRDTheme.scaled(22.0))
 	delete_btn.add_theme_font_size_override("font_size", GRDTheme.font_size_small())

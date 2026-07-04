@@ -1,6 +1,8 @@
 @tool
 extends EditorPlugin
 
+const GRDConstants = preload("res://addons/godot-resource-database/grd_constants.gd")
+
 var _panel: GRDEditorPanel = null
 var _last_db_path: String = ""
 
@@ -55,7 +57,7 @@ func _has_main_screen() -> bool:
 
 
 func _get_plugin_name() -> String:
-	return "Resource DB"
+	return GRDConstants.translate("plugin.name")
 
 
 func _get_plugin_icon() -> Texture2D:
